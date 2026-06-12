@@ -1,0 +1,2 @@
+Терминал 1 (бэк): cd backend ; .\.venv\Scripts\Activate.ps1 ; uvicorn app.main:app --reload --port 8000
+Терминал 2 (фронт): cd front ; npm run dev
