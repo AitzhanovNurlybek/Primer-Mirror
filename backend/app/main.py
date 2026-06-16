@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.admin import router as admin_router
 from app.api.calculator import router as calculator_router
 from app.api.company import router as company_router
+from app.api.leads import router as leads_router
+from app.api.works import router as works_router
 from app.core.config import settings
 from app.db.database import Base, engine
 
@@ -29,6 +31,8 @@ app.add_middleware(
 app.include_router(calculator_router)
 app.include_router(admin_router)
 app.include_router(company_router)
+app.include_router(leads_router)
+app.include_router(works_router)
 
 
 @app.get("/")

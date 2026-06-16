@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 
 import { fetchCompanyInfo } from '../api/company'
+import { fetchWorks } from '../api/works'
 import { whatsappLink } from '../utils/contacts'
 import { scrollToSection } from '../utils/scroll'
 import MirrorScrollHero from '../components/MirrorScrollHero'
@@ -178,14 +179,22 @@ function CtaRow({ company, compact }) {
 
 function HomePage() {
   const [company, setCompany] = useState(null)
+  const [works, setWorks] = useState(WORKS)
 
   useEffect(() => {
     fetchCompanyInfo().then(setCompany).catch(() => setCompany(null))
+    fetchWorks()
+      .then((items) => {
+        if (items.length > 0) {
+          setWorks(items.map((w) => ({ src: w.image, caption: w.caption })))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   return (
     <MotionConfig reducedMotion="user">
-      <main className="relative w-full bg-[#0b0a10] text-white">
+      <main className="relative w-full bg-[#2a2540] text-white">
         <SideNav />
         <MobileCtaBar />
         <BackToTop />
@@ -201,10 +210,10 @@ function HomePage() {
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                'radial-gradient(900px 500px at 15% 5%, rgba(168,85,247,0.10), transparent 60%),' +
-                'radial-gradient(800px 480px at 85% 30%, rgba(217,70,239,0.07), transparent 60%),' +
-                'radial-gradient(1000px 560px at 50% 62%, rgba(168,85,247,0.09), transparent 65%),' +
-                'radial-gradient(900px 520px at 50% 96%, rgba(217,70,239,0.10), transparent 60%)',
+                'radial-gradient(900px 500px at 15% 5%, rgba(192,132,252,0.20), transparent 60%),' +
+                'radial-gradient(800px 480px at 85% 30%, rgba(232,121,249,0.15), transparent 60%),' +
+                'radial-gradient(1000px 560px at 50% 62%, rgba(192,132,252,0.18), transparent 65%),' +
+                'radial-gradient(900px 520px at 50% 96%, rgba(232,121,249,0.18), transparent 60%)',
             }}
           />
 
@@ -232,7 +241,7 @@ function HomePage() {
                 {...reveal}
                 className="dark-scope relative mx-auto mt-12 max-w-4xl rounded-3xl border border-white/12 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45),0_0_60px_rgba(168,85,247,0.08)] backdrop-blur-md sm:p-10"
               >
-                <CalculatorWidget />
+                <CalculatorWidget enableLead />
                 {company && (
                   <div className="mt-8 flex flex-wrap items-center justify-center gap-4 border-t border-white/10 pt-8">
                     <a
@@ -245,7 +254,7 @@ function HomePage() {
                       className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 px-8 py-3.5 text-sm font-semibold uppercase tracking-[0.15em] text-white no-underline shadow-[0_8px_30px_rgba(168,85,247,0.4)] transition-transform duration-200 hover:scale-[1.02]"
                     >
                       <MessageCircle className="h-4 w-4" />
-                      Отправить заявку в WhatsApp
+                      Или напишите в WhatsApp
                     </a>
                     <span className="text-xs uppercase tracking-[0.2em] text-white/40">
                       Бесплатный расчет · Ответ в течение дня
@@ -262,9 +271,9 @@ function HomePage() {
               subtitle="Каждый проект — индивидуальный размер, форма и сценарий подсветки."
             >
               <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                {WORKS.map(({ src, caption }, index) => (
+                {works.map(({ src, caption }, index) => (
                   <motion.figure
-                    key={caption}
+                    key={`${caption}-${index}`}
                     {...reveal}
                     transition={{ ...reveal.transition, delay: (index % 2) * 0.1 }}
                     className="group relative m-0 aspect-[4/3] overflow-hidden rounded-2xl border border-white/10"

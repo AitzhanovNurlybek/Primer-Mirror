@@ -158,7 +158,7 @@ function MirrorScrollHero() {
         </motion.div>
 
         {/* Darkening overlay keeps text legible across every frame */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/30 to-[#0b0a10]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/10 to-[#2a2540]" />
       </div>
 
       <div className="absolute inset-0 z-10">

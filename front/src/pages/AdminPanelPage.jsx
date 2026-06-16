@@ -1,9 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Inbox, Calculator, Phone, Images, LogOut } from 'lucide-react'
 import { fetchPricing, updatePricing } from '../api/admin'
+import { fetchCompanyInfo, updateCompanyInfo } from '../api/company'
+import { fetchLeads, updateLeadStatus, deleteLead } from '../api/leads'
+import { fetchWorks, createWork, deleteWork } from '../api/works'
 import { clearToken, getToken } from '../auth'
 
-const FIELDS = [
+const TABS = [
+  { id: 'leads', label: 'Заявки', icon: Inbox },
+  { id: 'pricing', label: 'Цены', icon: Calculator },
+  { id: 'contacts', label: 'Контакты', icon: Phone },
+  { id: 'works', label: 'Работы', icon: Images },
+]
+
+const PRICING_FIELDS = [
   { name: 'price_per_m2', label: 'Цена за м² зеркала (3 мм), ₸' },
   { name: 'edge_processing_per_m', label: 'Обработка кромки, ₸ за п.м.' },
   { name: 'lighting_per_m', label: 'Подсветка, ₸ за п.м. периметра' },
@@ -11,97 +22,379 @@ const FIELDS = [
   { name: 'min_order_price', label: 'Минимальная стоимость заказа, ₸' },
 ]
 
-function AdminPanelPage() {
-  const [values, setValues] = useState(null)
-  const [status, setStatus] = useState('loading')
-  const [message, setMessage] = useState('')
-  const navigate = useNavigate()
+const CONTACT_FIELDS = [
+  { name: 'name', label: 'Название компании' },
+  { name: 'phone', label: 'Телефон' },
+  { name: 'whatsapp', label: 'WhatsApp' },
+  { name: 'instagram', label: 'Instagram (ссылка)' },
+  { name: 'kaspi_shop_url', label: 'Kaspi магазин (ссылка)' },
+]
+
+const LEAD_STATUS = {
+  new: { label: 'Новая', cls: 'admin-badge--new' },
+  in_progress: { label: 'В работе', cls: 'admin-badge--progress' },
+  done: { label: 'Закрыта', cls: 'admin-badge--done' },
+}
+
+function formatDate(iso) {
+  const d = new Date(iso)
+  return d.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function formatPrice(value) {
+  if (value === null || value === undefined) return '—'
+  return `${Math.round(value).toLocaleString('ru-RU')} ₸`
+}
+
+/* ----------------------------- Leads tab ----------------------------- */
+function LeadsTab({ token }) {
+  const [leads, setLeads] = useState(null)
+  const [error, setError] = useState('')
+
+  const load = useCallback(() => {
+    fetchLeads(token)
+      .then(setLeads)
+      .catch(() => setError('Не удалось загрузить заявки'))
+  }, [token])
 
   useEffect(() => {
-    const token = getToken()
+    load()
+  }, [load])
+
+  const handleStatus = async (id, status) => {
+    await updateLeadStatus(token, id, status)
+    load()
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Удалить заявку?')) return
+    await deleteLead(token, id)
+    load()
+  }
+
+  if (error) return <p className="page__status page__status--error">{error}</p>
+  if (!leads) return <p className="page__status">Загрузка...</p>
+  if (leads.length === 0) return <p className="page__status">Заявок пока нет.</p>
+
+  return (
+    <div className="admin-leads">
+      {leads.map((lead) => (
+        <div key={lead.id} className="admin-lead">
+          <div className="admin-lead__head">
+            <div>
+              <strong>{lead.name}</strong>
+              <a href={`tel:${lead.phone.replace(/[^\d+]/g, '')}`} className="admin-lead__phone">
+                {lead.phone}
+              </a>
+            </div>
+            <span className={`admin-badge ${LEAD_STATUS[lead.status]?.cls || ''}`}>
+              {LEAD_STATUS[lead.status]?.label || lead.status}
+            </span>
+          </div>
+
+          <div className="admin-lead__meta">
+            {lead.width_mm && lead.height_mm && (
+              <span>
+                {lead.width_mm}×{lead.height_mm} мм
+                {lead.quantity ? ` · ${lead.quantity} шт` : ''}
+              </span>
+            )}
+            {lead.with_lighting && <span>подсветка</span>}
+            {lead.with_frame && <span>рама{lead.frame_color ? ` (${lead.frame_color})` : ''}</span>}
+            <span className="admin-lead__price">{formatPrice(lead.total_price)}</span>
+          </div>
+
+          {lead.comment && <p className="admin-lead__comment">{lead.comment}</p>}
+
+          <div className="admin-lead__foot">
+            <span className="admin-lead__date">{formatDate(lead.created_at)}</span>
+            <div className="admin-lead__actions">
+              <select
+                value={lead.status}
+                onChange={(e) => handleStatus(lead.id, e.target.value)}
+              >
+                <option value="new">Новая</option>
+                <option value="in_progress">В работе</option>
+                <option value="done">Закрыта</option>
+              </select>
+              <button type="button" className="admin-link-danger" onClick={() => handleDelete(lead.id)}>
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ----------------------------- Pricing tab ----------------------------- */
+function PricingTab({ token }) {
+  const [values, setValues] = useState(null)
+  const [message, setMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetchPricing(token).then(setValues).catch(() => setMessage('Ошибка загрузки'))
+  }, [token])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setMessage('')
+    try {
+      setValues(await updatePricing(token, values))
+      setMessage('Сохранено')
+    } catch {
+      setMessage('Не удалось сохранить')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!values) return <p className="page__status">Загрузка...</p>
+
+  return (
+    <form className="admin-form" onSubmit={handleSubmit}>
+      <p className="admin-hint">Эти значения использует калькулятор стоимости на сайте.</p>
+      {PRICING_FIELDS.map((f) => (
+        <label key={f.name}>
+          {f.label}
+          <input
+            type="number"
+            min="0"
+            step="any"
+            value={values[f.name]}
+            onChange={(e) => setValues((p) => ({ ...p, [f.name]: Number(e.target.value) }))}
+            required
+          />
+        </label>
+      ))}
+      {message && <p className="page__status">{message}</p>}
+      <button type="submit" className="button button--primary" disabled={saving}>
+        {saving ? 'Сохранение...' : 'Сохранить'}
+      </button>
+    </form>
+  )
+}
+
+/* ----------------------------- Contacts tab ----------------------------- */
+function ContactsTab({ token }) {
+  const [values, setValues] = useState(null)
+  const [message, setMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetchCompanyInfo().then(setValues).catch(() => setMessage('Ошибка загрузки'))
+  }, [])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setMessage('')
+    try {
+      setValues(await updateCompanyInfo(token, values))
+      setMessage('Сохранено')
+    } catch {
+      setMessage('Не удалось сохранить')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!values) return <p className="page__status">Загрузка...</p>
+
+  return (
+    <form className="admin-form" onSubmit={handleSubmit}>
+      <p className="admin-hint">Контакты отображаются в шапке, футере и кнопках на сайте.</p>
+      {CONTACT_FIELDS.map((f) => (
+        <label key={f.name}>
+          {f.label}
+          <input
+            type="text"
+            value={values[f.name] || ''}
+            onChange={(e) => setValues((p) => ({ ...p, [f.name]: e.target.value }))}
+            required
+          />
+        </label>
+      ))}
+      {message && <p className="page__status">{message}</p>}
+      <button type="submit" className="button button--primary" disabled={saving}>
+        {saving ? 'Сохранение...' : 'Сохранить'}
+      </button>
+    </form>
+  )
+}
+
+/* ----------------------------- Works tab ----------------------------- */
+function WorksTab({ token }) {
+  const [works, setWorks] = useState(null)
+  const [image, setImage] = useState('')
+  const [caption, setCaption] = useState('')
+  const [message, setMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(() => {
+    fetchWorks().then(setWorks).catch(() => setMessage('Ошибка загрузки'))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 1.5 * 1024 * 1024) {
+      setMessage('Файл больше 1.5 МБ — выберите фото поменьше')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setImage(reader.result)
+    reader.readAsDataURL(file)
+  }
+
+  const handleAdd = async (e) => {
+    e.preventDefault()
+    if (!image) {
+      setMessage('Добавьте фото или ссылку на изображение')
+      return
+    }
+    setSaving(true)
+    setMessage('')
+    try {
+      await createWork(token, { image, caption, sort_order: works?.length || 0 })
+      setImage('')
+      setCaption('')
+      load()
+    } catch {
+      setMessage('Не удалось добавить')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Удалить работу?')) return
+    await deleteWork(token, id)
+    load()
+  }
+
+  return (
+    <div className="admin-works">
+      <form className="admin-form" onSubmit={handleAdd}>
+        <p className="admin-hint">
+          Загрузите фото работ (до 1.5 МБ) или вставьте ссылку. Они появятся в секции «Работы».
+        </p>
+        <label>
+          Фото с компьютера
+          <input type="file" accept="image/*" onChange={handleFile} />
+        </label>
+        <label>
+          Или ссылка на изображение
+          <input
+            type="text"
+            placeholder="https://..."
+            value={image.startsWith('data:') ? '' : image}
+            onChange={(e) => setImage(e.target.value)}
+          />
+        </label>
+        {image && <img src={image} alt="" className="admin-works__preview" />}
+        <label>
+          Подпись
+          <input type="text" value={caption} onChange={(e) => setCaption(e.target.value)} />
+        </label>
+        {message && <p className="page__status">{message}</p>}
+        <button type="submit" className="button button--primary" disabled={saving}>
+          {saving ? 'Добавление...' : 'Добавить работу'}
+        </button>
+      </form>
+
+      {works && works.length > 0 && (
+        <div className="admin-works__grid">
+          {works.map((w) => (
+            <div key={w.id} className="admin-works__item">
+              <img src={w.image} alt={w.caption} />
+              <div className="admin-works__item-foot">
+                <span>{w.caption || '—'}</span>
+                <button type="button" className="admin-link-danger" onClick={() => handleDelete(w.id)}>
+                  Удалить
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ----------------------------- Page shell ----------------------------- */
+function AdminPanelPage() {
+  const [tab, setTab] = useState('leads')
+  const [ready, setReady] = useState(false)
+  const navigate = useNavigate()
+  const token = getToken()
+
+  useEffect(() => {
     if (!token) {
       navigate('/admin')
       return
     }
+    // Validate token via a lightweight authorized call
     fetchPricing(token)
-      .then((data) => {
-        setValues(data)
-        setStatus('ready')
-      })
+      .then(() => setReady(true))
       .catch(() => {
         clearToken()
         navigate('/admin')
       })
-  }, [navigate])
-
-  const handleChange = (event) => {
-    const { name, value } = event.target
-    setValues((prev) => ({ ...prev, [name]: Number(value) }))
-  }
-
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    setStatus('saving')
-    setMessage('')
-    try {
-      const token = getToken()
-      const updated = await updatePricing(token, values)
-      setValues(updated)
-      setStatus('ready')
-      setMessage('Сохранено')
-    } catch {
-      setStatus('ready')
-      setMessage('Не удалось сохранить изменения')
-    }
-  }
+  }, [token, navigate])
 
   const handleLogout = () => {
     clearToken()
     navigate('/admin')
   }
 
-  if (status === 'loading' || !values) {
+  if (!ready) {
     return (
-      <main className="page page--narrow">
+      <main className="page">
         <p className="page__status">Загрузка...</p>
       </main>
     )
   }
 
   return (
-    <main className="page page--narrow">
-      <header className="page__header">
-        <h1>Управление ценами</h1>
-        <p>Эти значения используются калькулятором стоимости на сайте.</p>
-      </header>
+    <main className="page admin-page">
+      <div className="admin-topbar">
+        <h1>Админ-панель</h1>
+        <button type="button" className="button button--secondary" onClick={handleLogout}>
+          <LogOut size={16} /> Выйти
+        </button>
+      </div>
 
-      <form className="admin-form" onSubmit={handleSubmit}>
-        {FIELDS.map((field) => (
-          <label key={field.name}>
-            {field.label}
-            <input
-              type="number"
-              name={field.name}
-              min="0"
-              step="any"
-              value={values[field.name]}
-              onChange={handleChange}
-              required
-            />
-          </label>
-        ))}
+      <div className="admin-tabs">
+        {TABS.map((t) => {
+          const Icon = t.icon
+          return (
+            <button
+              key={t.id}
+              type="button"
+              className={`admin-tab ${tab === t.id ? 'admin-tab--active' : ''}`}
+              onClick={() => setTab(t.id)}
+            >
+              <Icon size={16} />
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
 
-        {message && <p className="page__status">{message}</p>}
-
-        <div className="admin-form__actions">
-          <button type="submit" className="button button--primary" disabled={status === 'saving'}>
-            {status === 'saving' ? 'Сохранение...' : 'Сохранить'}
-          </button>
-          <button type="button" className="button button--secondary" onClick={handleLogout}>
-            Выйти
-          </button>
-        </div>
-      </form>
+      <div className="admin-panel">
+        {tab === 'leads' && <LeadsTab token={token} />}
+        {tab === 'pricing' && <PricingTab token={token} />}
+        {tab === 'contacts' && <ContactsTab token={token} />}
+        {tab === 'works' && <WorksTab token={token} />}
+      </div>
     </main>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { estimatePrice } from '../api/calculator'
+import { submitLead } from '../api/leads'
 import { AnimateNumber } from './ui/AnimatedNumber'
 
 const FRAME_COLORS = [
@@ -20,10 +21,13 @@ const initialForm = {
   frame_color: FRAME_COLORS[0].value,
 }
 
-function CalculatorWidget({ resultFooter }) {
+function CalculatorWidget({ resultFooter, enableLead = false }) {
   const [form, setForm] = useState(initialForm)
   const [price, setPrice] = useState(null)
   const [status, setStatus] = useState('idle')
+
+  const [lead, setLead] = useState({ name: '', phone: '', comment: '' })
+  const [leadStatus, setLeadStatus] = useState('idle') // idle | sending | sent | error
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target
@@ -31,6 +35,34 @@ function CalculatorWidget({ resultFooter }) {
       ...prev,
       [name]: type === 'checkbox' ? checked : type === 'number' || type === 'range' ? Number(value) : value,
     }))
+  }
+
+  const handleLeadChange = (event) => {
+    const { name, value } = event.target
+    setLead((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleLeadSubmit = async (event) => {
+    event.preventDefault()
+    setLeadStatus('sending')
+    try {
+      await submitLead({
+        name: lead.name.trim(),
+        phone: lead.phone.trim(),
+        comment: lead.comment.trim() || null,
+        width_mm: form.width_mm,
+        height_mm: form.height_mm,
+        quantity: form.quantity,
+        with_lighting: form.with_lighting,
+        with_frame: form.with_frame,
+        frame_color: form.with_frame ? form.frame_color : null,
+        total_price: price,
+      })
+      setLeadStatus('sent')
+      setLead({ name: '', phone: '', comment: '' })
+    } catch {
+      setLeadStatus('error')
+    }
   }
 
   useEffect(() => {
@@ -152,6 +184,55 @@ function CalculatorWidget({ resultFooter }) {
           </p>
         )}
         {resultFooter}
+
+        {enableLead && (
+          <form className="lead-form" onSubmit={handleLeadSubmit}>
+            {leadStatus === 'sent' ? (
+              <p className="lead-form__success">
+                Заявка отправлена! Мы свяжемся с вами в ближайшее время.
+              </p>
+            ) : (
+              <>
+                <p className="lead-form__title">Оставьте заявку с этим расчетом</p>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Ваше имя"
+                  value={lead.name}
+                  onChange={handleLeadChange}
+                  required
+                />
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="Телефон"
+                  value={lead.phone}
+                  onChange={handleLeadChange}
+                  required
+                />
+                <input
+                  type="text"
+                  name="comment"
+                  placeholder="Комментарий (необязательно)"
+                  value={lead.comment}
+                  onChange={handleLeadChange}
+                />
+                <button
+                  type="submit"
+                  className="button button--primary"
+                  disabled={leadStatus === 'sending'}
+                >
+                  {leadStatus === 'sending' ? 'Отправка...' : 'Отправить заявку'}
+                </button>
+                {leadStatus === 'error' && (
+                  <p className="page__status page__status--error">
+                    Не удалось отправить. Попробуйте позже.
+                  </p>
+                )}
+              </>
+            )}
+          </form>
+        )}
       </div>
     </div>
   )
