@@ -1,6 +1,14 @@
 from app.db.models import PricingSettings
 from app.schemas.calculator import CalculatorRequest
 
+# Curved shapes need extra cutting/grinding, so they cost more than a rectangle.
+SHAPE_MULTIPLIER = {
+    "rectangle": 1.0,
+    "arch": 1.15,
+    "oval": 1.2,
+    "circle": 1.2,
+}
+
 
 def calculate_price(request: CalculatorRequest, pricing: PricingSettings) -> float:
     area_m2 = (request.width_mm / 1000) * (request.height_mm / 1000)
@@ -14,6 +22,8 @@ def calculate_price(request: CalculatorRequest, pricing: PricingSettings) -> flo
 
     if request.with_frame:
         price += perimeter_m * pricing.frame_per_m
+
+    price *= SHAPE_MULTIPLIER.get(request.shape, 1.0)
 
     price = max(price, pricing.min_order_price)
     total = price * request.quantity

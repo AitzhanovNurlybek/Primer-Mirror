@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Home, Calculator } from 'lucide-react'
 import ExpandableTabs from './ui/ExpandableTabs'
 import { cn } from '../lib/cn'
-import { scrollToSection } from '../utils/scroll'
+import { openCalculator } from '../utils/scroll'
 import logo from '../assets/logo.jpeg'
 
 const NAV_TABS = [
@@ -28,7 +28,7 @@ function Header() {
   const activeIndex = NAV_TABS.findIndex((tab) => tab.path === location.pathname)
 
   const handleCta = () => {
-    if (isHome) scrollToSection('calculator')
+    if (isHome) openCalculator()
     else navigate('/calculator')
   }
 

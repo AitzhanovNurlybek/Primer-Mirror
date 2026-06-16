@@ -6,3 +6,9 @@ export function scrollToSection(id) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
+
+/** Scroll to the catalog block and ask it to expand the custom-order calculator. */
+export function openCalculator() {
+  window.dispatchEvent(new Event('open-calculator'))
+  scrollToSection('calculator')
+}

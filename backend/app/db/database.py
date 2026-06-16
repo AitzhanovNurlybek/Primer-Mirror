@@ -26,3 +26,18 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def ensure_columns() -> None:
+    """Add new columns to existing tables without dropping data (lightweight migration)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    existing_tables = inspector.get_table_names()
+
+    # leads.shape — added after the table already existed in some installs
+    if "leads" in existing_tables:
+        lead_columns = {col["name"] for col in inspector.get_columns("leads")}
+        if "shape" not in lead_columns:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE leads ADD COLUMN shape VARCHAR(20)"))

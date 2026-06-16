@@ -43,6 +43,7 @@ class Lead(Base):
     width_mm: Mapped[int | None] = mapped_column(Integer, nullable=True)
     height_mm: Mapped[int | None] = mapped_column(Integer, nullable=True)
     quantity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    shape: Mapped[str | None] = mapped_column(String(20), nullable=True)
     with_lighting: Mapped[bool] = mapped_column(Boolean, default=False)
     with_frame: Mapped[bool] = mapped_column(Boolean, default=False)
     frame_color: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -59,4 +60,20 @@ class Work(Base):
     image: Mapped[str] = mapped_column(Text, nullable=False)  # URL or base64 data URL
     caption: Mapped[str] = mapped_column(String(200), default="")
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class CatalogItem(Base):
+    __tablename__ = "catalog_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    brand: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    width_cm: Mapped[int] = mapped_column(Integer, nullable=False)
+    height_cm: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_smart: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_led: Mapped[bool] = mapped_column(Boolean, default=False)
+    price: Mapped[float] = mapped_column(Float, nullable=False)
+    image: Mapped[str] = mapped_column(Text, nullable=False)
+    kaspi_url: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

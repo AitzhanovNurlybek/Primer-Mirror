@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { cn } from '../lib/cn'
-import { scrollToSection } from '../utils/scroll'
+import { openCalculator } from '../utils/scroll'
 
 /** Sticky bottom CTA on mobile; hides while the calculator or the request
  * section is on screen so it never covers the form. */
@@ -38,7 +38,7 @@ function MobileCtaBar() {
     >
       <button
         type="button"
-        onClick={() => scrollToSection('calculator')}
+        onClick={() => openCalculator()}
         className="w-full cursor-pointer rounded-full border border-white/20 bg-gradient-to-r from-purple-500 to-fuchsia-500 py-4 text-sm font-semibold uppercase tracking-[0.15em] text-white shadow-[0_8px_30px_rgba(168,85,247,0.45)] backdrop-blur-sm transition-transform duration-200 active:scale-[0.98]"
       >
         Рассчитать стоимость

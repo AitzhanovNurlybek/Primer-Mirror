@@ -479,6 +479,230 @@
   gap: 12px;
 }
 
+/* Compact controls: shape segmented, option chips, frame swatches */
+.seg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.seg-field__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.seg__btn {
+  padding: 7px 4px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.seg__btn:hover {
+  color: var(--text-h);
+}
+
+.seg__btn--active {
+  color: #fff;
+  background: var(--accent);
+}
+
+.qty-field {
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px !important;
+}
+
+.qty-field input {
+  width: 90px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-toggle {
+  flex: 1;
+  min-width: 120px;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip-toggle:hover {
+  color: var(--text-h);
+  border-color: var(--accent);
+}
+
+.chip-toggle--active {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, border-color 0.2s ease;
+}
+
+.swatch:hover {
+  transform: scale(1.1);
+}
+
+.swatch--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+/* Mirror preview + market price reference in the result card */
+.mirror-preview {
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 8px;
+}
+
+.market-ref {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+
+.market-ref__label {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.market-ref__range {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
+
+.market-ref__hint {
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.market-ref__toggle {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.market-ref__toggle:hover {
+  opacity: 0.85;
+}
+
+.market-models {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.market-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: border-color 0.2s ease;
+}
+
+.market-model:hover {
+  border-color: var(--accent);
+}
+
+.market-model img {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.market-model__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.market-model__size {
+  font-size: 11px;
+  color: var(--text);
+}
+
+.market-model__price {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.market-model__cart {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
 /* Lead form inside the calculator result card */
 .lead-form {
   display: flex;

@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { ArrowRight, Images } from 'lucide-react'
-import { scrollToSection } from '../utils/scroll'
+import { scrollToSection, openCalculator } from '../utils/scroll'
 
 import frame01 from '../assets/mirror-scroll/frame-01.webp'
 import frame02 from '../assets/mirror-scroll/frame-02.webp'
@@ -103,7 +103,7 @@ function HeroFinale() {
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
           <button
             type="button"
-            onClick={() => scrollToSection('calculator')}
+            onClick={() => openCalculator()}
             className="group inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/40 bg-white px-9 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-black transition-all duration-300 hover:bg-white/90 hover:shadow-[0_0_40px_rgba(255,255,255,0.25)]"
           >
             Рассчитать стоимость

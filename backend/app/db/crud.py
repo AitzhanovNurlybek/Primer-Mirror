@@ -1,8 +1,8 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.models import CompanySettings, Lead, PricingSettings, Work
+from app.db.models import CatalogItem, CompanySettings, Lead, PricingSettings, Work
 
 PRICING_ROW_ID = 1
 COMPANY_ROW_ID = 1
@@ -125,5 +125,115 @@ def delete_work(db: Session, work_id: int) -> bool:
     if work is None:
         return False
     db.delete(work)
+    db.commit()
+    return True
+
+
+# --- Catalog ---
+
+def list_catalog(
+    db: Session,
+    *,
+    width_cm: int | None = None,
+    height_cm: int | None = None,
+    tolerance: int = 5,
+    brand: str | None = None,
+    is_smart: bool | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    sort: str = "price_asc",
+    limit: int | None = None,
+) -> list[CatalogItem]:
+    stmt = select(CatalogItem)
+
+    # Match either orientation (W×H or H×W) within a tolerance in cm
+    if width_cm is not None and height_cm is not None:
+        a, b = width_cm, height_cm
+        stmt = stmt.where(
+            (
+                CatalogItem.width_cm.between(a - tolerance, a + tolerance)
+                & CatalogItem.height_cm.between(b - tolerance, b + tolerance)
+            )
+            | (
+                CatalogItem.width_cm.between(b - tolerance, b + tolerance)
+                & CatalogItem.height_cm.between(a - tolerance, a + tolerance)
+            )
+        )
+
+    if brand:
+        stmt = stmt.where(CatalogItem.brand == brand)
+    if is_smart is not None:
+        stmt = stmt.where(CatalogItem.is_smart.is_(is_smart))
+    if min_price is not None:
+        stmt = stmt.where(CatalogItem.price >= min_price)
+    if max_price is not None:
+        stmt = stmt.where(CatalogItem.price <= max_price)
+
+    if sort == "price_desc":
+        stmt = stmt.order_by(CatalogItem.price.desc())
+    elif sort == "size_asc":
+        stmt = stmt.order_by(CatalogItem.width_cm * CatalogItem.height_cm)
+    elif sort == "size_desc":
+        stmt = stmt.order_by((CatalogItem.width_cm * CatalogItem.height_cm).desc())
+    else:  # price_asc (default)
+        stmt = stmt.order_by(CatalogItem.price)
+
+    if limit:
+        stmt = stmt.limit(limit)
+
+    return list(db.scalars(stmt))
+
+
+def catalog_price_stats(
+    db: Session, width_cm: int, height_cm: int, tolerance: int = 10
+) -> dict:
+    """Price range of ready catalog mirrors near a given size (market reference)."""
+    items = list_catalog(db, width_cm=width_cm, height_cm=height_cm, tolerance=tolerance)
+    prices = [item.price for item in items]
+    if not prices:
+        return {"count": 0, "min_price": None, "max_price": None, "avg_price": None}
+    return {
+        "count": len(prices),
+        "min_price": min(prices),
+        "max_price": max(prices),
+        "avg_price": round(sum(prices) / len(prices)),
+    }
+
+
+def catalog_brands(db: Session) -> list[dict]:
+    stmt = (
+        select(CatalogItem.brand, func.count(CatalogItem.id))
+        .where(CatalogItem.brand.is_not(None))
+        .group_by(CatalogItem.brand)
+        .order_by(func.count(CatalogItem.id).desc())
+    )
+    return [{"brand": brand, "count": count} for brand, count in db.execute(stmt) if brand]
+
+
+def count_catalog(db: Session) -> int:
+    return db.scalar(select(func.count(CatalogItem.id))) or 0
+
+
+def create_catalog_item(db: Session, data: dict) -> CatalogItem:
+    item = CatalogItem(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def bulk_replace_catalog(db: Session, items: list[dict]) -> int:
+    """Wipe the catalog and insert a fresh set (used by the import)."""
+    db.query(CatalogItem).delete()
+    db.add_all([CatalogItem(**data) for data in items])
+    db.commit()
+    return len(items)
+
+
+def delete_catalog_item(db: Session, item_id: int) -> bool:
+    item = db.get(CatalogItem, item_id)
+    if item is None:
+        return False
+    db.delete(item)
     db.commit()
     return True

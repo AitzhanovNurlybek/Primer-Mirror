@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Inbox, Calculator, Phone, Images, LogOut } from 'lucide-react'
+import { Inbox, Calculator, Phone, Images, Grid3x3, LogOut } from 'lucide-react'
 import { fetchPricing, updatePricing } from '../api/admin'
 import { fetchCompanyInfo, updateCompanyInfo } from '../api/company'
 import { fetchLeads, updateLeadStatus, deleteLead } from '../api/leads'
 import { fetchWorks, createWork, deleteWork } from '../api/works'
+import { fetchCatalog, importCatalog, deleteCatalogItem } from '../api/catalog'
 import { clearToken, getToken } from '../auth'
 
 const TABS = [
   { id: 'leads', label: 'Заявки', icon: Inbox },
+  { id: 'catalog', label: 'Каталог', icon: Grid3x3 },
   { id: 'pricing', label: 'Цены', icon: Calculator },
   { id: 'contacts', label: 'Контакты', icon: Phone },
   { id: 'works', label: 'Работы', icon: Images },
@@ -34,6 +36,13 @@ const LEAD_STATUS = {
   new: { label: 'Новая', cls: 'admin-badge--new' },
   in_progress: { label: 'В работе', cls: 'admin-badge--progress' },
   done: { label: 'Закрыта', cls: 'admin-badge--done' },
+}
+
+const SHAPE_LABELS = {
+  rectangle: 'Прямоугольное',
+  oval: 'Овал',
+  circle: 'Круг',
+  arch: 'Арка',
 }
 
 function formatDate(iso) {
@@ -98,6 +107,9 @@ function LeadsTab({ token }) {
                 {lead.width_mm}×{lead.height_mm} мм
                 {lead.quantity ? ` · ${lead.quantity} шт` : ''}
               </span>
+            )}
+            {lead.shape && lead.shape !== 'rectangle' && (
+              <span>{SHAPE_LABELS[lead.shape] || lead.shape}</span>
             )}
             {lead.with_lighting && <span>подсветка</span>}
             {lead.with_frame && <span>рама{lead.frame_color ? ` (${lead.frame_color})` : ''}</span>}
@@ -329,6 +341,88 @@ function WorksTab({ token }) {
   )
 }
 
+/* ----------------------------- Catalog tab ----------------------------- */
+function CatalogTab({ token }) {
+  const [items, setItems] = useState(null)
+  const [message, setMessage] = useState('')
+  const [importing, setImporting] = useState(false)
+
+  const load = useCallback(() => {
+    fetchCatalog({ limit: 500, sort: 'price_asc' })
+      .then(setItems)
+      .catch(() => setMessage('Ошибка загрузки'))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file
+    if (!file) return
+    setImporting(true)
+    setMessage('')
+    try {
+      const raw = JSON.parse(await file.text())
+      if (!Array.isArray(raw)) throw new Error('not array')
+      const result = await importCatalog(token, raw)
+      setMessage(`Импортировано: ${result.imported}, пропущено: ${result.skipped}`)
+      load()
+    } catch {
+      setMessage('Не удалось импортировать. Нужен файл products.json (массив товаров).')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Удалить товар из каталога?')) return
+    await deleteCatalogItem(token, id)
+    load()
+  }
+
+  return (
+    <div className="admin-works">
+      <div className="admin-form">
+        <p className="admin-hint">
+          Каталог тянется из Kaspi. Чтобы обновить — загрузи свежий <b>products.json</b> (собранный
+          скриптом из магазина). Импорт <b>заменит</b> весь каталог.
+        </p>
+        <label>
+          Загрузить products.json
+          <input type="file" accept="application/json,.json" onChange={handleImport} disabled={importing} />
+        </label>
+        {message && <p className="page__status">{message}</p>}
+        <p className="admin-hint">
+          Сейчас в каталоге: <b>{items ? items.length : '...'}</b> товаров.
+        </p>
+      </div>
+
+      {items && items.length > 0 && (
+        <div className="admin-works__grid">
+          {items.slice(0, 60).map((it) => (
+            <div key={it.id} className="admin-works__item">
+              <img src={it.image} alt={it.name} />
+              <div className="admin-works__item-foot">
+                <span>
+                  {it.name} · {it.width_cm}×{it.height_cm}
+                </span>
+                <button type="button" className="admin-link-danger" onClick={() => handleDelete(it.id)}>
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {items && items.length > 60 && (
+        <p className="admin-hint">Показаны первые 60 из {items.length}. Управление остальными — через импорт.</p>
+      )}
+    </div>
+  )
+}
+
 /* ----------------------------- Page shell ----------------------------- */
 function AdminPanelPage() {
   const [tab, setTab] = useState('leads')
@@ -391,6 +485,7 @@ function AdminPanelPage() {
 
       <div className="admin-panel">
         {tab === 'leads' && <LeadsTab token={token} />}
+        {tab === 'catalog' && <CatalogTab token={token} />}
         {tab === 'pricing' && <PricingTab token={token} />}
         {tab === 'contacts' && <ContactsTab token={token} />}
         {tab === 'works' && <WorksTab token={token} />}

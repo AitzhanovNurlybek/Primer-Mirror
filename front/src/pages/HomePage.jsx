@@ -27,9 +27,9 @@ import {
 import { fetchCompanyInfo } from '../api/company'
 import { fetchWorks } from '../api/works'
 import { whatsappLink } from '../utils/contacts'
-import { scrollToSection } from '../utils/scroll'
+import { openCalculator } from '../utils/scroll'
 import MirrorScrollHero from '../components/MirrorScrollHero'
-import CalculatorWidget from '../components/CalculatorWidget'
+import CatalogSection from '../components/CatalogSection'
 import SideNav from '../components/SideNav'
 import MobileCtaBar from '../components/MobileCtaBar'
 import BackToTop from '../components/BackToTop'
@@ -145,7 +145,7 @@ function CtaRow({ company, compact }) {
     <div className={`flex flex-wrap items-center justify-center gap-4 ${compact ? 'mt-10' : 'mt-12'}`}>
       <button
         type="button"
-        onClick={() => scrollToSection('calculator')}
+        onClick={() => openCalculator()}
         className="group inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/30 bg-white px-8 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-black transition-all duration-300 hover:bg-white/90 hover:shadow-[0_0_36px_rgba(255,255,255,0.22)]"
       >
         Рассчитать стоимость
@@ -231,38 +231,7 @@ function HomePage() {
               </div>
             </Section>
 
-            <Section
-              id="calculator"
-              kicker="Калькулятор"
-              title="Рассчитайте стоимость зеркала за 1 минуту"
-              subtitle="Укажите параметры — мы подготовим предварительный расчет и свяжемся с вами."
-            >
-              <motion.div
-                {...reveal}
-                className="dark-scope relative mx-auto mt-12 max-w-4xl rounded-3xl border border-white/12 bg-white/[0.04] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45),0_0_60px_rgba(168,85,247,0.08)] backdrop-blur-md sm:p-10"
-              >
-                <CalculatorWidget enableLead />
-                {company && (
-                  <div className="mt-8 flex flex-wrap items-center justify-center gap-4 border-t border-white/10 pt-8">
-                    <a
-                      href={whatsappLink(
-                        company.whatsapp,
-                        'Здравствуйте! Хочу заказать зеркало, помогите с расчетом.'
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 px-8 py-3.5 text-sm font-semibold uppercase tracking-[0.15em] text-white no-underline shadow-[0_8px_30px_rgba(168,85,247,0.4)] transition-transform duration-200 hover:scale-[1.02]"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      Или напишите в WhatsApp
-                    </a>
-                    <span className="text-xs uppercase tracking-[0.2em] text-white/40">
-                      Бесплатный расчет · Ответ в течение дня
-                    </span>
-                  </div>
-                )}
-              </motion.div>
-            </Section>
+            <CatalogSection />
 
             <Section
               id="works"

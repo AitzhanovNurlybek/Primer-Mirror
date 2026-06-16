@@ -14,6 +14,7 @@ class LeadCreate(BaseModel):
     width_mm: int | None = Field(default=None, gt=0, le=6000)
     height_mm: int | None = Field(default=None, gt=0, le=6000)
     quantity: int | None = Field(default=None, gt=0, le=1000)
+    shape: str | None = None
     with_lighting: bool = False
     with_frame: bool = False
     frame_color: str | None = None
@@ -28,6 +29,7 @@ class LeadSchema(BaseModel):
     width_mm: int | None
     height_mm: int | None
     quantity: int | None
+    shape: str | None
     with_lighting: bool
     with_frame: bool
     frame_color: str | None

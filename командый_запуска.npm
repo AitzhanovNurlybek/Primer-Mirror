@@ -1,2 +1,6 @@
 Терминал 1 (бэк): cd backend ; .\.venv\Scripts\Activate.ps1 ; uvicorn app.main:app --reload --port 8000
 Терминал 2 (фронт): cd front ; npm run dev
+
+Railway:
+JWT_SECRET_KEY = 9e7716bdc299cf389dee1765598610e05d28c66bb1f5724ae1117dfa501b9b97
+ADMIN_PASSWORD (пример, можешь свой) = V-yVt8Z88QPM8rrz
