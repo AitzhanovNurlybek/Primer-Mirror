@@ -32,7 +32,8 @@ def _resolve_database_url() -> str:
 
 def _make_engine():
     url = _resolve_database_url()
-    args = {"check_same_thread": False} if url.startswith("sqlite") else {}
+    # connect_timeout keeps an unreachable Postgres from hanging startup (-> 502).
+    args = {"check_same_thread": False} if url.startswith("sqlite") else {"connect_timeout": 5}
     eng = create_engine(url, connect_args=args, pool_pre_ping=True)
 
     # If a real (non-SQLite) DB is configured but unreachable, fall back to
