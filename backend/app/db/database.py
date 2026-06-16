@@ -5,12 +5,32 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import settings
 
-# Railway/Heroku hand out URLs that start with "postgres://", but SQLAlchemy
-# requires the "postgresql://" scheme — normalise it so either form works.
-database_url = settings.database_url
-if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
+SQLITE_FALLBACK = "sqlite:///./app/data/app.db"
 
+
+def _resolve_database_url() -> str:
+    raw = (settings.database_url or "").strip()
+
+    # An unresolved Railway reference ("${{Postgres.DATABASE_URL}}") or an empty
+    # value would crash SQLAlchemy — fall back to SQLite and warn loudly instead.
+    if not raw or raw.startswith("${{") or "://" not in raw:
+        print(
+            f"[db] WARNING: DATABASE_URL is not a valid URL (got {raw!r}). "
+            "Falling back to SQLite — data will NOT persist across redeploys. "
+            "Fix DATABASE_URL to point at your Postgres service.",
+            flush=True,
+        )
+        return SQLITE_FALLBACK
+
+    # Railway/Heroku may hand out "postgres://", but SQLAlchemy wants "postgresql://".
+    if raw.startswith("postgres://"):
+        raw = raw.replace("postgres://", "postgresql://", 1)
+
+    print(f"[db] using {raw.split('://', 1)[0]}:// database", flush=True)
+    return raw
+
+
+database_url = _resolve_database_url()
 connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
 engine = create_engine(database_url, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
