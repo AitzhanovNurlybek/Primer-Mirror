@@ -30,9 +30,30 @@ def _resolve_database_url() -> str:
     return raw
 
 
-database_url = _resolve_database_url()
-connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
-engine = create_engine(database_url, connect_args=connect_args)
+def _make_engine():
+    url = _resolve_database_url()
+    args = {"check_same_thread": False} if url.startswith("sqlite") else {}
+    eng = create_engine(url, connect_args=args, pool_pre_ping=True)
+
+    # If a real (non-SQLite) DB is configured but unreachable, fall back to
+    # SQLite so the app still boots instead of crash-looping with 502s.
+    if not url.startswith("sqlite"):
+        try:
+            with eng.connect():
+                pass
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"[db] ERROR: cannot connect to database ({exc!r}); "
+                "falling back to SQLite. Check that the Postgres service is linked "
+                "and DATABASE_URL points to it.",
+                flush=True,
+            )
+            eng.dispose()
+            eng = create_engine(SQLITE_FALLBACK, connect_args={"check_same_thread": False})
+    return eng
+
+
+engine = _make_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 

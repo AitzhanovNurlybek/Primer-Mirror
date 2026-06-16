@@ -38,9 +38,12 @@ def seed_catalog_if_empty() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    ensure_columns()
-    seed_catalog_if_empty()
+    try:
+        Base.metadata.create_all(bind=engine)
+        ensure_columns()
+        seed_catalog_if_empty()
+    except Exception as exc:  # noqa: BLE001 — never let DB init crash the whole app
+        print(f"[startup] DB init failed: {exc!r}", flush=True)
     yield
 
 
