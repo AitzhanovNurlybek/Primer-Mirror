@@ -1,3 +1,5 @@
+import json
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,10 +9,10 @@ class Settings(BaseSettings):
     app_name: str = "Primer Mirror API"
     host: str = "0.0.0.0"
     port: int = 8000
-    cors_origins: list[str] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
+
+    # Kept as a raw string so a malformed value never crashes startup.
+    # Accepts: "*", a single URL, a comma-separated list, or a JSON array.
+    cors_origins: str = "*"
 
     database_url: str = "sqlite:///./app/data/app.db"
 
@@ -34,6 +36,20 @@ class Settings(BaseSettings):
     whatsapp: str = "+7 747 177 07 61"
     instagram: str = "https://instagram.com/primer_mirror"
     kaspi_shop_url: str = "https://kaspi.kz/"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        raw = (self.cors_origins or "").strip()
+        if not raw:
+            return ["*"]
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(x).strip() for x in parsed if str(x).strip()]
+            except json.JSONDecodeError:
+                pass
+        return [part.strip() for part in raw.split(",") if part.strip()]
 
 
 settings = Settings()
